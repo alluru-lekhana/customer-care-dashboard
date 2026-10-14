@@ -1,16 +1,83 @@
-# React + Vite
+# Customer Care Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A React-based customer care dashboard designed to help support teams access customer information and manage customer-related operations.
 
-Currently, two official plugins are available:
+## Overview
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+The Customer Care Dashboard provides a centralized interface for customer support teams to view customer records and access customer details. It integrates with the WhatsApp Bot backend to retrieve customer information through APIs.
 
-## React Compiler
+## Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Customer Management:** View customer records retrieved from the backend API.
+- **Customer Search:** Search and filter customer records.
+- **Customer Details:** Dedicated interface for viewing individual customer information.
+- **API Integration:** Fetch customer data from the WhatsApp Bot backend.
+- **Responsive Interface:** Dashboard layout built with React.
 
-## Expanding the ESLint configuration
+*Note: Customer details and order history integration are still being developed.*
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Tech Stack
+
+- React
+- Vite
+- JavaScript
+- CSS
+- React Router
+- Fetch API
+- Cloudflare Workers (backend API)
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js
+- npm
+- Git
+
+### Installation
+
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/alluru-lekhana/customer-care-dashboard.git
+   ```
+
+2. Navigate to the project directory:
+
+   ```bash
+   cd customer-care-dashboard
+   ```
+
+3. Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+4. Start the development server:
+
+   ```bash
+   npm run dev
+   ```
+
+5. Open the local URL shown in your terminal.
+
+## Backend API
+
+The dashboard connects to the WhatsApp Bot backend to retrieve customer information.
+
+The customer API requires authorization. Configure authentication securely before running the application. Do not commit private tokens, API keys, or other credentials to the repository.
+
+## Project Status
+
+**In Development**
+
+Customer listing and backend integration are in progress. Customer details and related functionality are being developed.
+
+## Team Collaboration
+
+This repository is maintained for the Customer Care Dashboard project. Access is managed through GitHub collaborators.
+
+## License
+
+Internal project. Not intended for public redistribution without permission.
