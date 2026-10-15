@@ -2,7 +2,21 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getOrders } from '../data/orderStore'
 import { getCustomers } from '../api/customerApi'
+function formatPhone(phone) {
+  if (!phone) return '—'
 
+  const digits = String(phone).replace(/\D/g, '')
+  const number =
+    digits.startsWith('91') && digits.length === 12
+      ? digits.slice(2)
+      : digits
+
+  if (number.length === 10) {
+    return `+91 ${number.slice(0, 5)} ${number.slice(5)}`
+  }
+
+  return `+${digits}`
+}
 const initialCustomers = [
   { id: '1', name: 'Rahul', phone: '+91 98765 43210', status: 'Active', lastOrder: '#ORD-1001' },
   { id: '2', name: 'Priya', phone: '+91 98765 12345', status: 'Active', lastOrder: '#ORD-1002' },
@@ -187,7 +201,7 @@ const allCustomers = [
       <div className="customer-toolbar">
         <input
           type="text"
-          placeholder="Search by name, phone or order ID..."
+          placeholder="Search by name, phone ..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -302,7 +316,6 @@ const allCustomers = [
             <thead>
               <tr>
                 <th>CUSTOMER</th>
-                <th>CUSTOMER ID</th>
                 <th>PHONE</th>
                                 <th>EMAIL</th>
                 <th>TOTAL ORDERS</th>
@@ -324,8 +337,7 @@ const allCustomers = [
                         <span>{customer.name}</span>
                       </div>
                     </td>
-                    <td>{customer.customerId ?? '—'}</td>
-                    <td>{customer.phone}</td>
+                    <td>{formatPhone(customer.phone || customer.whatsapp_number)}</td>
                     <td>{customer.email || '—'}</td>
                     <td>{customer.orders}</td>
                     <td className="order-id">{customer.lastOrder}</td>

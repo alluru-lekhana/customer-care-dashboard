@@ -1,163 +1,135 @@
+
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getOrders } from '../data/orderStore'
+import {
+  getCustomerById,
+  getCustomerOrders,
+} from '../api/customerApi'
 
-const customerData = {
-  '1': {
-    customerId: 'CUS-1001',
-    name: 'Rahul',
-    phone: '+91 98765 43210',
-  },
-  '2': {
-    customerId: 'CUS-1002',
-    name: 'Priya',
-    phone: '+91 98765 12345',
-  },
-  '3': {
-    customerId: 'CUS-1003',
-    name: 'Arun',
-    phone: '+91 91234 56789',
-  },
-  '4': {
-    customerId: 'CUS-1004',
-    name: 'Sneha',
-    phone: '+91 99887 66554',
-  },
+function formatPhone(phone) {
+  if (!phone) return ''
+
+  const digits = String(phone).replace(/\D/g, '')
+  const number =
+    digits.startsWith('91') && digits.length === 12
+      ? digits.slice(2)
+      : digits
+
+  if (number.length === 10) {
+    return `+91 ${number.slice(0, 5)} ${number.slice(5)}`
+  }
+
+  return `+${digits}`
 }
 
 function CustomerDetails() {
   const navigate = useNavigate()
-  const { id } = useParams()
+  const { customerId } = useParams()
 
+  const [customer, setCustomer] = useState(null)
   const [allOrders, setAllOrders] = useState([])
-  const [customers, setCustomers] = useState(() => {
-    try {
-      return {
-        ...customerData,
-        ...JSON.parse(
-          localStorage.getItem('customer_care_customers') || '{}'
-        ),
-      }
-    } catch {
-      return customerData
-    }
-  })
-
-  const customer = customers[id]
-  const [isEditing, setIsEditing] = useState(false)
-  const [editedCustomer, setEditedCustomer] = useState({
-  customerId: '',
-  name: '',
-  phone: '',
-  email: '',
-})
-  useEffect(() => {
-    const loadOrders = () => setAllOrders(getOrders())
-
-    loadOrders()
-    window.addEventListener('ordersUpdated', loadOrders)
-
-    return () => {
-      window.removeEventListener('ordersUpdated', loadOrders)
-    }
-  }, [])
-
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   
-useEffect(() => {
-  if (customer) {
-    setEditedCustomer({
-      customerId: customer.customerId || '',
-      name: customer.name || '',
-      phone: customer.phone || '',
-      email: customer.email || '',
-    })
-  }
-}, [
-  id,
-  customer?.customerId,
-  customer?.name,
-  customer?.phone,
-  customer?.email,
-])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadCustomer() {
+      try {
+        setLoading(true)
+        setError('')
+
+        const data = await getCustomerById(customerId)
+        if (cancelled) return
+
+        setCustomer({
+          ...data,
+          name: data.name || `Customer ${data.id}`,
+          phone: formatPhone(data.whatsapp_number),
+          email: data.email || '',
+          address:
+            data.address?.address_line ||
+            data.address?.full_address ||
+            data.profile?.address ||
+            data.metadata?.address ||
+            '',
+        })
+
+        const orders = await getCustomerOrders(customerId)
+        if (!cancelled) {
+          setAllOrders(Array.isArray(orders) ? orders : [])
+        }
+      } catch (err) {
+        console.error('Failed to load customer details:', err)
+        if (!cancelled) {
+          setError(err.message || 'Failed to load customer details')
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    loadCustomer()
+    return () => {
+      cancelled = true
+    }
+  }, [customerId])
 
 
-  if (!customer) {
+  if (loading) {
     return (
       <div className="customer-details-page">
-        <button
-          className="back-button"
-          onClick={() => navigate('/customers')}
-        >
+        <button className="back-button" onClick={() => navigate('/customers')}>
           ← Back to Customers
         </button>
-        <h2>Customer not found</h2>
+        <p>Loading customer details...</p>
       </div>
     )
   }
 
-  const customerOrders = allOrders
-    .filter(
-      (order) =>
-        order.customer?.trim().toLowerCase() ===
-        customer.name.trim().toLowerCase()
+  if (error || !customer) {
+    return (
+      <div className="customer-details-page">
+        <button className="back-button" onClick={() => navigate('/customers')}>
+          ← Back to Customers
+        </button>
+        <h2>{error ? 'Unable to load customer' : 'Customer not found'}</h2>
+        {error && <p>{error}</p>}
+        {error && (
+          <button onClick={() => window.location.reload()}>Retry</button>
+        )}
+      </div>
     )
-    .map((order) => ({
+  }
+
+  const customerOrders = allOrders.map((order) => {
+    const rawAmount = order.amount ?? order.total_amount ?? 0
+
+    return {
       ...order,
+      id: order.id ?? order.order_id,
+      product:
+        order.product ??
+        order.product_name ??
+        order.items?.map((item) => item.product_name ?? item.name).join(', ') ??
+        '—',
+      date: order.date ?? order.created_at ?? '—',
+      status: order.status ?? 'Unknown',
       amount:
-        typeof order.amount === 'number'
-          ? order.amount
-          : Number(
-              String(order.amount ?? '0').replace(/[₹,\s]/g, '')
-            ),
-    }))
-
-  const totalSpent = customerOrders.reduce(
-    (total, order) => total + order.amount,
-    0
-  )
-
-  const lastOrder = customerOrders[0]
-
-const handleSave = () => {
-  if (!editedCustomer.name.trim()) {
-    alert('Please enter a customer name.')
-    return
-  }
-
-  const savedCustomers = JSON.parse(
-    localStorage.getItem('customer_care_customers') || '{}'
-  )
-
-  const updatedCustomer = {
-    ...customer,
-    customerId: customer.customerId,
-    name: editedCustomer.name.trim(),
-    phone: customer.phone,
-    email: editedCustomer.email.trim(),
-  }
-
-  savedCustomers[id] = updatedCustomer
-
-  localStorage.setItem(
-    'customer_care_customers',
-    JSON.stringify(savedCustomers)
-  )
-
-  setCustomers((previous) => ({
-    ...previous,
-    [id]: updatedCustomer,
-  }))
-
-  setEditedCustomer({
-    customerId: updatedCustomer.customerId || '',
-    name: updatedCustomer.name,
-    phone: updatedCustomer.phone,
-    email: updatedCustomer.email,
+        typeof rawAmount === 'number'
+          ? rawAmount
+          : Number(String(rawAmount).replace(/[₹,\s]/g, '')) || 0,
+    }
   })
 
-  setIsEditing(false)
-  alert('Customer details saved successfully!')
-}
+  const initials = customer.name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase()
 
   return (
     <div className="customer-details-page">
@@ -168,133 +140,65 @@ const handleSave = () => {
         ← Back to Customers
       </button>
 
-      <div className="customer-profile-card">
-        <div className="profile-top">
-          <div className="large-avatar">
-            {customer.name.charAt(0).toUpperCase()}
-          </div>
+      <section className="customer-profile-card">
+        <div className="customer-profile-heading">
+          <div className="large-avatar">{initials}</div>
 
-          <div>
-            <h2>{customer.name}</h2>
-            <p>{customer.phone}</p>
+          <div className="customer-heading-text">
+            <span className="profile-eyebrow">CUSTOMER PROFILE</span>
+            <h1>{customer.name}</h1>
+            <p>Customer contact information</p>
           </div>
-
-          <span className="customer-status">Active</span>
 
           <button
-            className="update-customer-btn"
-            onClick={() => setIsEditing(!isEditing)}
-          >
-            {isEditing ? 'Cancel Edit' : 'Edit Customer'}
-          </button>
+  className="update-customer-btn"
+  onClick={() => navigate(`/customers/${customerId}/edit`)}
+>
+  Edit Customer
+</button>
         </div>
 
-        {isEditing && (
-          <div className="customer-edit-form">
-            <h3>Update Customer Details</h3>
-            <label>
-  Customer ID
-  <input
-    value={editedCustomer.customerId}
-    disabled
-    onChange={(e) =>
-      setEditedCustomer({
-        ...editedCustomer,
-        customerId: e.target.value,
-      })
-    }
-  />
-</label>
-
-            <label>
-              Customer Name
-              <input
-                value={editedCustomer.name}
-                onChange={(e) =>
-                  setEditedCustomer({
-                    ...editedCustomer,
-                    name: e.target.value,
-                  })
-                }
-              />
-            </label>
-
-            <label>
-  Phone Number
-  <input
-    type="tel"
-    value={editedCustomer.phone}
-    readOnly
-    title="Only an authorized administrator can change the phone number"
-  />
-  <small>
-    Phone number cannot be changed by customer support.
-  </small>
-</label>
-<label>
-  Email (Optional)
-  <input
-    type="email"
-    value={editedCustomer.email}
-    onChange={(e) =>
-      setEditedCustomer({
-        ...editedCustomer,
-        email: e.target.value,
-      })
-    }
-    placeholder="customer@example.com"
-  />
-</label>
-
-<div className="edit-actions">
-  <button
-    type="button"
-    onClick={() => {
-      setEditedCustomer({
-        customerId: customer.customerId || '',
-        name: customer.name || '',
-        phone: customer.phone || '',
-        email: customer.email || '',
-      })
-      setIsEditing(false)
-    }}
-  >
-    Cancel
-  </button>
-
-  <button type="button" onClick={handleSave}>
-    Save Changes
-  </button>
-</div>
-</div>
-)}
-
-
-           
-        <div className="customer-info">
-          <div>
-            <span>Total Orders</span>
-            <strong>{customerOrders.length}</strong>
+        <div className="customer-contact-grid">
+          <div className="contact-item">
+            <span className="contact-icon">☎</span>
+            <div>
+              <span className="contact-label">Phone number</span>
+              <strong>{customer.phone || 'Not provided'}</strong>
+            </div>
           </div>
 
-          <div>
-            <span>Total Spent</span>
-            <strong>₹{totalSpent.toLocaleString('en-IN')}</strong>
+          <div className="contact-item">
+            <span className="contact-icon">✉</span>
+            <div>
+              <span className="contact-label">Email address</span>
+              <strong className="contact-value">
+                {customer.email || 'Not provided'}
+              </strong>
+            </div>
           </div>
 
-          <div>
-            <span>Last Order</span>
-            <strong>{lastOrder ? lastOrder.id : 'No orders'}</strong>
+          <div className="contact-item address-item">
+            <span className="contact-icon">⌖</span>
+            <div>
+              <span className="contact-label">Delivery address</span>
+              <strong className="contact-value">
+                {customer.address || 'Address not available'}
+              </strong>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
+      
 
-      <div className="orders-section">
+      <section className="orders-section">
         <div className="section-header">
           <div>
             <h2>Order History</h2>
             <p>Previous orders placed by this customer.</p>
           </div>
+          <span className="order-count">
+            {customerOrders.length} {customerOrders.length === 1 ? 'order' : 'orders'}
+          </span>
         </div>
 
         <div className="table-container">
@@ -308,14 +212,19 @@ const handleSave = () => {
                 <th>STATUS</th>
               </tr>
             </thead>
-
             <tbody>
               {customerOrders.length > 0 ? (
-                customerOrders.map((order) => (
-                  <tr key={order.id}>
-                    <td className="order-id">{order.id}</td>
+                customerOrders.map((order, index) => (
+                  <tr key={order.id ?? index}>
+                    <td className="order-id">
+                      {order.id ? `#${order.id}` : '—'}
+                    </td>
                     <td>{order.product}</td>
-                    <td>{order.date}</td>
+                    <td>
+                      {order.date === '—'
+                        ? '—'
+                        : new Date(order.date).toLocaleString('en-IN')}
+                    </td>
                     <td>₹{order.amount.toLocaleString('en-IN')}</td>
                     <td>
                       <span
@@ -330,15 +239,13 @@ const handleSave = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5">
-                    No orders found for this customer.
-                  </td>
+                  <td colSpan="5">No orders found for this customer.</td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
     </div>
   )
 }

@@ -16,6 +16,7 @@ import Carts from './pages/Carts'
 import Conversations from './pages/Conversations'
 import Products from './pages/Products'
 import CartDetails from './pages/CartDetails'
+import EditCustomer from './pages/EditCustomer'
 import './App.css'
 
 function AppLayout() {
@@ -143,13 +144,19 @@ const currentPage =
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/customers" element={<Customers />} />
-            <Route path="/customers/:id" element={<CustomerDetails />} />
-            <Route path="/orders" element={<Orders />} />
+            <Route
+  path="/customers/:customerId"
+  element={<CustomerDetails />}
+/>            <Route path="/orders" element={<Orders />} />
             <Route path="/orders/:id" element={<OrderDetails />} />
             <Route path="/carts" element={<Carts />} />
             <Route path="/carts/:id" element={<CartDetails />} />
             <Route path="/conversations" element={<Conversations />} />
             <Route path="/products" element={<Products />} />
+            <Route
+  path="/customers/:customerId/edit"
+  element={<EditCustomer />}
+/>
             <Route path="/tracking" element={<Tracking />} />
           </Routes>
         </section>
