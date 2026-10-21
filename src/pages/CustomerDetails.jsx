@@ -4,8 +4,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   getCustomerById,
   getCustomerOrders,
+  getCustomerAddresses,
 } from '../api/customerApi'
-
 function formatPhone(phone) {
   if (!phone) return ''
 
@@ -30,6 +30,7 @@ function CustomerDetails() {
   const [allOrders, setAllOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [addresses, setAddresses] = useState([])
   
 
   useEffect(() => {
@@ -55,6 +56,11 @@ function CustomerDetails() {
             data.metadata?.address ||
             '',
         })
+        const customerAddresses = await getCustomerAddresses(customerId)
+
+if (cancelled) return
+
+setAddresses(customerAddresses)
 
         const orders = await getCustomerOrders(customerId)
         if (!cancelled) {
@@ -177,15 +183,45 @@ function CustomerDetails() {
             </div>
           </div>
 
-          <div className="contact-item address-item">
-            <span className="contact-icon">⌖</span>
-            <div>
-              <span className="contact-label">Delivery address</span>
-              <strong className="contact-value">
-                {customer.address || 'Address not available'}
-              </strong>
-            </div>
-          </div>
+          
+<div className="contact-item address-item">
+  <span className="contact-icon">⌖</span>
+  <div>
+    <span className="contact-label">Delivery address</span>
+
+    {addresses.length > 0 ? (
+      addresses.map((address) => (
+        <div key={address.id} style={{ marginBottom: '12px' }}>
+          <strong className="contact-value">
+            {address.profile_name}
+            {address.is_default ? ' (Default)' : ''}
+          </strong>
+
+          <p>
+            {[
+              address.recipient_name,
+              address.address_line_1,
+              address.address_line_2,
+              address.landmark,
+              address.city,
+              address.state,
+              address.pincode,
+            ]
+              .filter(Boolean)
+              .join(', ')}
+          </p>
+
+          <p>{address.recipient_phone}</p>
+        </div>
+      ))
+    ) : (
+      <strong className="contact-value">
+        Address not available
+      </strong>
+    )}
+  </div>
+</div>
+
         </div>
       </section>
       
@@ -207,7 +243,7 @@ function CustomerDetails() {
               <tr>
                 <th>ORDER ID</th>
                 <th>PRODUCT</th>
-                <th>DATE</th>
+                <th> DATE & TIME</th>
                 <th>AMOUNT</th>
                 <th>STATUS</th>
               </tr>

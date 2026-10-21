@@ -1,43 +1,11 @@
 import { useEffect, useState } from 'react'
 import {
-  getOrders,
-  updateOrderStatus,
-} from '../data/orderStore'
-const statusToApi = {
-  Processing: 'PACKED',
-  Shipped: 'SHIPPED',
-  'In Transit': 'OUT_FOR_DELIVERY',
-  Delivered: 'DELIVERED',
-}
+  getAllOrders,
+  updateOrderStatusApi,
+} from '../api/customerApi'
 
-async function updateOrderStatusApi(orderId, status, token) {
-  const apiStatus = statusToApi[status]
 
-  if (!apiStatus) {
-    throw new Error(`Status "${status}" cannot be updated through the API.`)
-  }
 
-  const response = await fetch(
-    `https://whatsapp-bot.whatsbot.workers.dev/api/admin/orders/${orderId}/status`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        status: apiStatus,
-      }),
-    }
-  )
-
-  if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(errorText || 'Failed to update order status')
-  }
-
-  return response.json()
-}
 const statusOptions = [
   'Pending',
   'Processing',
@@ -101,15 +69,31 @@ function Tracking() {
   const [status, setStatus] = useState('')
 
   useEffect(() => {
-    const savedOrders = getOrders()
+  async function loadOrders() {
+    try {
+      const data = await getAllOrders()
 
-    setOrders(savedOrders)
+      const formattedOrders = data.map((order) => ({
+        ...order,
+        id: String(order.id),
+        customer: order.customer_name || order.customer || 'Unknown customer',
+        product: order.product_name || 'Product not recorded',
+        status: order.status || 'Pending',
+      }))
 
-    if (savedOrders.length > 0) {
-      setSelectedOrder(savedOrders[0])
-      setStatus(savedOrders[0].status)
+      setOrders(formattedOrders)
+
+      if (formattedOrders.length > 0) {
+        setSelectedOrder(formattedOrders[0])
+        setStatus(formattedOrders[0].status)
+      }
+    } catch (error) {
+      console.error('Failed to load orders:', error)
     }
-  }, [])
+  }
+
+  loadOrders()
+}, [])
 
   const filteredOrders = orders.filter((order) => {
     const searchText = search.toLowerCase().trim()
@@ -130,22 +114,35 @@ function Tracking() {
   }
 
 
-const handleStatusUpdate = () => {
-  if (!selectedOrder) return
+const [saving, setSaving] = useState(false)
+const [message, setMessage] = useState('')
 
-  const updatedOrders = updateOrderStatus(
-    selectedOrder.id,
-    status
-  )
+const handleStatusUpdate = async () => {
+  if (!selectedOrder || saving) return
 
-  const updatedOrder = updatedOrders.find(
-    (order) => order.id === selectedOrder.id
-  )
+  try {
+    setSaving(true)
+    setMessage('')
 
-  if (updatedOrder) {
-    setOrders(updatedOrders)
-    setSelectedOrder(updatedOrder)
-    setStatus(updatedOrder.status)
+    await updateOrderStatusApi(selectedOrder.id, status)
+
+    setOrders((previousOrders) =>
+      previousOrders.map((order) =>
+        order.id === selectedOrder.id
+          ? { ...order, status }
+          : order
+      )
+    )
+
+    setSelectedOrder((previous) =>
+      previous ? { ...previous, status } : previous
+    )
+
+    setMessage('Order status updated successfully.')
+  } catch (error) {
+    setMessage(`Failed to update status: ${error.message}`)
+  } finally {
+    setSaving(false)
   }
 }
 
@@ -242,6 +239,7 @@ const handleStatusUpdate = () => {
 
             {/* Update Status */}
             <div className="status-update-card">
+            
 
               <div>
                 <h3>Update Order Status</h3>
@@ -264,11 +262,13 @@ const handleStatusUpdate = () => {
                 </select>
 
                 <button
-                  className="update-status-button"
-                  onClick={handleStatusUpdate}
-                >
-                  Update Status
-                </button>
+  className="update-status-button"
+  onClick={handleStatusUpdate}
+  disabled={saving}
+>
+  {saving ? 'Updating...' : 'Update Status'}
+</button>
+                {message && <p role="status">{message}</p>}
 
               </div>
             </div>

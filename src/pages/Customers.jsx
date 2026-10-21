@@ -160,19 +160,19 @@ const allCustomers = [
     })),
 ]
 
-
-  const customerData = customers.map((customer) => ({
+const customerData = customers.map((customer) => ({
   ...customer,
   name: customer.name || `Customer ${customer.id}`,
   phone: customer.whatsapp_number || '—',
   email: customer.email || '—',
   customerId: customer.id,
-  orders: customer.profile?.total_orders ?? 0,
-  lastOrder: customer.profile?.last_order_id
-    ? `#${customer.profile.last_order_id}`
+  orders: customer.total_orders ?? 0,
+  lastOrder: customer.last_order
+    ? new Date(customer.last_order).toLocaleDateString()
     : '—',
   status: 'Active',
 }))
+
 
   const filteredCustomers = customerData.filter((customer) => {
   const searchText = search.toLowerCase()
