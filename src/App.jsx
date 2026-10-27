@@ -133,7 +133,7 @@ const currentPage =
       + New Customer
     </button>
 
-    <div className="admin">
+    <div className="admin-badge" aria-label="Admin profile">
       <div className="admin-avatar">A</div>
       <span>Admin</span>
     </div>

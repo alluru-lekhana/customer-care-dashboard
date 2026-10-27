@@ -4,16 +4,6 @@ import {
   updateOrderStatusApi,
 } from '../api/customerApi'
 
-
-
-const statusOptions = [
-  'Pending',
-  'Processing',
-  'Shipped',
-  'In Transit',
-  'Delivered',
-]
-
 const trackingInfo = {
   '1001': {
     trackingId: 'TRK-784512',
@@ -39,10 +29,9 @@ const trackingInfo = {
 
 function createTimeline(order) {
   const statuses = [
-    'Order Placed',
+    'Pending',
     'Processing',
     'Shipped',
-    'In Transit',
     'Delivered',
   ]
 
@@ -284,21 +273,20 @@ const handleStatusUpdate = async () => {
               <div className="status-update-controls">
 
                 <select
-  value={status}
-  onChange={(e) => setStatus(e.target.value)}
->
-  <option value={selectedOrder.status}>
-    {statusLabels[selectedOrder.status] || selectedOrder.status}
-  </option>
-
-  {(allowedTransitions[selectedOrder.status] || []).map(
-    (nextStatus) => (
-      <option key={nextStatus} value={nextStatus}>
-        {statusLabels[nextStatus] || nextStatus}
-      </option>
-    )
-  )}
-</select>
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                >
+                  <option value={selectedOrder.status}>
+                    {statusLabels[selectedOrder.status] || selectedOrder.status}
+                  </option>
+                  {(allowedTransitions[selectedOrder.status] || []).map(
+                    (nextStatus) => (
+                      <option key={nextStatus} value={nextStatus}>
+                        {statusLabels[nextStatus] || nextStatus}
+                      </option>
+                    )
+                  )}
+                </select>
 
                 <button
   className="update-status-button"

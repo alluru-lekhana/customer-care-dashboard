@@ -23,6 +23,7 @@ function CartDetails() {
   const [cart, setCart] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [localStatus, setLocalStatus] = useState('active')
 
   useEffect(() => {
     let cancelled = false
@@ -37,7 +38,12 @@ function CartDetails() {
           (item) => String(item.id) === String(id)
         )
 
-        if (!cancelled) setCart(found ?? null)
+        if (!cancelled) {
+          setCart(found ?? null)
+          setLocalStatus(
+            String(found?.status || 'active').trim().toLowerCase()
+          )
+        }
       } catch (err) {
         if (!cancelled) {
           setError(err.message || 'Could not load cart details.')
@@ -128,9 +134,16 @@ function CartDetails() {
           <p>Customer shopping cart information</p>
         </div>
 
-        <span className={`status ${String(cart.status || 'unknown').toLowerCase()}`}>
-          {formatStatus(cart.status)}
-        </span>
+        <select
+          className="status-select status-select--large"
+          value={localStatus}
+          onChange={(event) => setLocalStatus(event.target.value)}
+        >
+          <option value="active">Active</option>
+          <option value="abandoned">Abandoned</option>
+          <option value="converted">Converted</option>
+          <option value="checked_out">Checked Out</option>
+        </select>
       </div>
 
       <div className="order-details-grid">
@@ -221,7 +234,7 @@ function CartDetails() {
         </div>
         <div className="detail-row">
           <span>Cart Status</span>
-          <strong>{formatStatus(cart.status)}</strong>
+          <strong>{formatStatus(localStatus)}</strong>
         </div>
       </div>
 

@@ -122,6 +122,13 @@ export async function getAllCarts() {
   return [];
 }
 
+export const ORDER_STATUS_OPTIONS = [
+  'Pending',
+  'Processing',
+  'Shipped',
+  'Delivered',
+]
+
 export async function getAllProducts() {
   const data = await apiFetch('/api/admin/products')
 
@@ -159,6 +166,16 @@ export async function updateOrderStatusApi(orderId, status) {
     Shipped: 'SHIPPED',
     'In Transit': 'OUT_FOR_DELIVERY',
     Delivered: 'DELIVERED',
+    pending: 'pending',
+    payment_pending: 'payment_pending',
+    paid: 'paid',
+    failed: 'failed',
+    cancelled: 'cancelled',
+    fulfilled: 'fulfilled',
+    PACKED: 'PACKED',
+    SHIPPED: 'SHIPPED',
+    OUT_FOR_DELIVERY: 'OUT_FOR_DELIVERY',
+    DELIVERED: 'DELIVERED',
   }
 
   const apiStatus = statusMap[status]

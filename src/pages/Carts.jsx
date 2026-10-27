@@ -3,6 +3,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getAllCarts } from '../api/customerApi'
 
+const CART_STATUS_OPTIONS = [
+  { value: 'active', label: 'Active' },
+  { value: 'abandoned', label: 'Abandoned' },
+  { value: 'converted', label: 'Converted' },
+  { value: 'checked_out', label: 'Checked Out' },
+]
+
 function formatDate(dateString) {
   if (!dateString) return '—'
 
@@ -44,6 +51,7 @@ function Carts() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [liveMode, setLiveMode] = useState(true)
 
   useEffect(() => {
     let cancelled = false
@@ -104,6 +112,16 @@ function Carts() {
       (total, item) => total + Number(item.quantity ?? 0),
       0,
     )
+
+  const handleCartStatusChange = (cartId, nextStatus) => {
+    setCarts((previousCarts) =>
+      previousCarts.map((cart) =>
+        cart.id === cartId
+          ? { ...cart, status: nextStatus }
+          : cart
+      )
+    )
+  }
     
   const totalCarts = carts.length
 
@@ -128,7 +146,14 @@ function Carts() {
           <p>View customer carts and their products.</p>
         </div>
 
-        <span className="status active">Live Data</span>
+        <button
+          type="button"
+          className={`status live-toggle ${liveMode ? 'active' : 'inactive'}`}
+          onClick={() => setLiveMode((current) => !current)}
+          aria-pressed={liveMode}
+        >
+          {liveMode ? 'Live Data' : 'Paused'}
+        </button>
       </div>
       
   <div className="cart-stats-grid">
@@ -216,13 +241,27 @@ function Carts() {
                     <td>{getItemCount(cart)}</td>
                     <td>{formatCurrency(getCartTotal(cart))}</td>
                     <td>
-                      <span
-                        className={`status ${String(cart.status || 'unknown').toLowerCase()}`}
+                      <select
+                        className="status-select"
+                        value={
+                          String(cart.status || 'active')
+                            .trim()
+                            .toLowerCase()
+                            .replace(/\s+/g, '_')
+                        }
+                        onChange={(event) =>
+                          handleCartStatusChange(
+                            cart.id,
+                            event.target.value
+                          )
+                        }
                       >
-                        {String(cart.status || 'Unknown')
-                          .replaceAll('_', ' ')
-                          .replace(/\b\w/g, (char) => char.toUpperCase())}
-                      </span>
+                        {CART_STATUS_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                     <td>{formatDate(cart.updated_at)}</td>
                     <td>

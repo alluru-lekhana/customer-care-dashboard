@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getAllOrders, getCustomers } from '../api/customerApi'
+import {
+  getAllOrders,
+  getCustomers,
+  ORDER_STATUS_OPTIONS,
+  updateOrderStatusApi,
+} from '../api/customerApi'
 
 function formatDate(value) {
   if (!value) return '—'
@@ -36,6 +41,22 @@ function normalizeStatus(status) {
     .replaceAll(' ', '_')
 }
 
+function formatStatusLabel(status) {
+  const normalized = String(status || 'Pending').trim()
+
+  const matched = ORDER_STATUS_OPTIONS.find(
+    (option) => option.toLowerCase() === normalized.toLowerCase()
+  )
+
+  if (matched) {
+    return matched
+  }
+
+  return normalized
+    .replaceAll('_', ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
 function Orders() {
   const navigate = useNavigate()
 
@@ -44,6 +65,8 @@ function Orders() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [statusMessage, setStatusMessage] = useState('')
+  const [savingOrderId, setSavingOrderId] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -133,6 +156,35 @@ if (!cancelled) {
     return matchesSearch && matchesStatus
   })
 
+  const handleStatusChange = async (orderId, nextStatus) => {
+    const currentOrder = orders.find((order) => order.id === orderId)
+
+    if (!currentOrder || savingOrderId) return
+
+    const normalized = normalizeStatus(nextStatus)
+
+    if (normalizeStatus(currentOrder.status) === normalized) return
+
+    try {
+      setSavingOrderId(orderId)
+      setStatusMessage('')
+      await updateOrderStatusApi(orderId, nextStatus)
+
+      setOrders((previousOrders) =>
+        previousOrders.map((order) =>
+          order.id === orderId
+            ? { ...order, status: normalized }
+            : order
+        )
+      )
+      setStatusMessage(`Order #${orderId} status updated.`)
+    } catch (error) {
+      setStatusMessage(`Unable to update order status: ${error.message}`)
+    } finally {
+      setSavingOrderId(null)
+    }
+  }
+
   return (
     <div className="orders-page">
       <div className="page-heading">
@@ -156,17 +208,17 @@ if (!cancelled) {
         >
           <option value="all">All Status</option>
           <option value="pending">Pending</option>
-          <option value="payment_pending">Payment Pending</option>
-          <option value="paid">Paid</option>
-          <option value="confirmed">Confirmed</option>
-          <option value="packed">Packed</option>
+          <option value="processing">Processing</option>
           <option value="shipped">Shipped</option>
-          <option value="out_for_delivery">Out for Delivery</option>
           <option value="delivered">Delivered</option>
-          <option value="cancelled">Cancelled</option>
-          <option value="refunded">Refunded</option>
         </select>
       </div>
+
+      {statusMessage && (
+        <p className="status-save-message" role="status">
+          {statusMessage}
+        </p>
+      )}
 
       <div className="orders-section">
         <div className="section-header">
@@ -225,16 +277,24 @@ if (!cancelled) {
                     <td>{order.customer}</td>
                     <td>{order.product}</td>
                     <td>{order.quantity}</td>
-                    <td>{order.source}</td>
+                    <td className="source-cell">{order.source}</td>
                     <td>{order.date}</td>
                     <td>{order.amount}</td>
                     <td>
-                      <span
-                        className={`status ${order.status.replaceAll('_', '-')}`}
+                      <select
+                        className="status-select"
+                        value={formatStatusLabel(order.status)}
+                        disabled={savingOrderId !== null}
+                        onChange={(event) =>
+                          handleStatusChange(order.id, event.target.value)
+                        }
                       >
-                        {order.status.replaceAll('_', ' ')
-                          .replace(/\b\w/g, (char) => char.toUpperCase())}
-                      </span>
+                        {ORDER_STATUS_OPTIONS.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                     <td>
                       <button

@@ -1,7 +1,12 @@
 
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getAllOrders, getCustomers } from '../api/customerApi'
+import {
+  getAllOrders,
+  getCustomers,
+  ORDER_STATUS_OPTIONS,
+  updateOrderStatusApi,
+} from '../api/customerApi'
 
 const statusSteps = [
   'Order Placed',
@@ -61,6 +66,19 @@ function formatDate(value) {
   })
 }
 
+function formatStatusLabel(status) {
+  const normalized = String(status || 'Pending').trim()
+  const directMatch = ORDER_STATUS_OPTIONS.find(
+    (option) => option.toLowerCase() === normalized.toLowerCase()
+  )
+
+  if (directMatch) return directMatch
+
+  const cleaned = normalized.replaceAll('_', ' ')
+
+  return cleaned.replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
 function OrderDetails() {
   const navigate = useNavigate()
   const { id } = useParams()
@@ -68,6 +86,7 @@ function OrderDetails() {
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [updatingStatus, setUpdatingStatus] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -174,6 +193,28 @@ function OrderDetails() {
     )
   }
 
+  const handleStatusChange = async (nextStatus) => {
+    if (!order || updatingStatus) return
+
+    try {
+      setUpdatingStatus(true)
+      await updateOrderStatusApi(order.id, nextStatus)
+
+      setOrder((previousOrder) => ({
+        ...previousOrder,
+        status: nextStatus,
+        payment: {
+          ...previousOrder.payment,
+          status: nextStatus,
+        },
+      }))
+    } catch (error) {
+      window.alert(`Unable to update order status: ${error.message}`)
+    } finally {
+      setUpdatingStatus(false)
+    }
+  }
+
   return (
     <div className="order-details-page">
       <button
@@ -187,22 +228,29 @@ function OrderDetails() {
         <div>
           <p className="order-label">ORDER</p>
           <h2>#{order.id}</h2>
-          <p>
-            Placed on {order.date} via{' '}
-            {order.source === 'whatsapp_bot'
-              ? 'WhatsApp'
-              : order.source}
+          <p className="order-meta-line">
+            <span>Placed on {order.date}</span>
+            <span>
+              via{' '}
+              {order.source === 'whatsapp_bot'
+                ? 'WhatsApp'
+                : order.source}
+            </span>
           </p>
         </div>
 
-        <span
-          className={`status ${String(order.status || 'unknown')
-            .toLowerCase()
-            .replaceAll('_', '-')
-            .replace(/\s+/g, '-')}`}
+        <select
+          className="status-select status-select--large"
+          value={formatStatusLabel(order.status)}
+          onChange={(event) => handleStatusChange(event.target.value)}
+          disabled={updatingStatus}
         >
-          {String(order.status || 'Unknown').replaceAll('_', ' ')}
-        </span>
+          {ORDER_STATUS_OPTIONS.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="order-details-grid">
