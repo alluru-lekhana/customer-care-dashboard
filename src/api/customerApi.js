@@ -4,6 +4,7 @@ const BASE_URL = 'https://whatsapp-bot.whatsbot.workers.dev'
 // Local testing only. Never commit your token to GitHub.
 const TOKEN = 'innova-admin-2026-secret'
 
+
 async function apiFetch(path, options = {}) {
   const response = await fetch(`${BASE_URL}${path}`, {
     ...options,
@@ -15,13 +16,25 @@ async function apiFetch(path, options = {}) {
     },
   })
 
+  const text = await response.text()
+
+  console.log('API URL:', `${BASE_URL}${path}`)
+  console.log('API Status:', response.status)
+  console.log('API Response:', text)
+
   if (!response.ok) {
-    const message = await response.text()
-    throw new Error(message || `API request failed: ${response.status}`)
+    throw new Error(text || `API request failed: ${response.status}`)
   }
 
-  return response.json()
+  try {
+    return JSON.parse(text)
+  } catch {
+    throw new Error(
+      `Expected JSON from ${path}, but received: ${text.slice(0, 200)}`
+    )
+  }
 }
+
 
 export async function getCustomers() {
   const data = await apiFetch('/api/admin/customers')
@@ -141,20 +154,21 @@ export async function getAllConversations() {
 }
 export async function updateOrderStatusApi(orderId, status) {
   const statusMap = {
+    Pending: 'pending',
     Processing: 'PACKED',
     Shipped: 'SHIPPED',
     'In Transit': 'OUT_FOR_DELIVERY',
     Delivered: 'DELIVERED',
-  };
+  }
 
-  const apiStatus = statusMap[status];
+  const apiStatus = statusMap[status]
 
   if (!apiStatus) {
-    throw new Error(`Cannot update status: ${status}`);
+    throw new Error(`Unsupported order status: ${status}`)
   }
 
   return apiFetch(`/api/admin/orders/${orderId}/status`, {
     method: 'POST',
     body: JSON.stringify({ status: apiStatus }),
-  });
+  })
 }

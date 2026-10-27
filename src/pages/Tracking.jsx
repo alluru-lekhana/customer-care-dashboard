@@ -61,7 +61,31 @@ function createTimeline(order) {
     }
   })
 }
+const allowedTransitions = {
+  pending: ['payment_pending', 'paid', 'failed', 'cancelled'],
+  payment_pending: ['paid', 'failed', 'cancelled'],
+  paid: ['PACKED', 'fulfilled', 'cancelled'],
+  failed: ['payment_pending', 'cancelled'],
+  cancelled: [],
+  fulfilled: [],
+  PACKED: ['SHIPPED', 'cancelled'],
+  SHIPPED: ['OUT_FOR_DELIVERY', 'cancelled'],
+  OUT_FOR_DELIVERY: ['DELIVERED', 'cancelled'],
+  DELIVERED: [],
+}
 
+const statusLabels = {
+  pending: 'Pending',
+  payment_pending: 'Payment Pending',
+  paid: 'Paid',
+  failed: 'Failed',
+  cancelled: 'Cancelled',
+  fulfilled: 'Fulfilled',
+  PACKED: 'Processing',
+  SHIPPED: 'Shipped',
+  OUT_FOR_DELIVERY: 'In Transit',
+  DELIVERED: 'Delivered',
+}
 function Tracking() {
   const [orders, setOrders] = useState([])
   const [search, setSearch] = useState('')
@@ -124,20 +148,29 @@ const handleStatusUpdate = async () => {
     setSaving(true)
     setMessage('')
 
-    await updateOrderStatusApi(selectedOrder.id, status)
+    const result = await updateOrderStatusApi(
+      selectedOrder.id,
+      status
+    )
+
+    const savedOrder = result.order ?? result
+    const savedStatus = savedOrder.status ?? status
 
     setOrders((previousOrders) =>
       previousOrders.map((order) =>
         order.id === selectedOrder.id
-          ? { ...order, status }
+          ? { ...order, status: savedStatus }
           : order
       )
     )
 
     setSelectedOrder((previous) =>
-      previous ? { ...previous, status } : previous
+      previous
+        ? { ...previous, status: savedStatus }
+        : previous
     )
 
+    setStatus(savedStatus)
     setMessage('Order status updated successfully.')
   } catch (error) {
     setMessage(`Failed to update status: ${error.message}`)
@@ -251,15 +284,21 @@ const handleStatusUpdate = async () => {
               <div className="status-update-controls">
 
                 <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                >
-                  {statusOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
+  value={status}
+  onChange={(e) => setStatus(e.target.value)}
+>
+  <option value={selectedOrder.status}>
+    {statusLabels[selectedOrder.status] || selectedOrder.status}
+  </option>
+
+  {(allowedTransitions[selectedOrder.status] || []).map(
+    (nextStatus) => (
+      <option key={nextStatus} value={nextStatus}>
+        {statusLabels[nextStatus] || nextStatus}
+      </option>
+    )
+  )}
+</select>
 
                 <button
   className="update-status-button"
